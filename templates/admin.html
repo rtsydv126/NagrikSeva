@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin Dashboard</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body data-mode="admin" data-title="Admin Dashboard"><div id="page">
+<div id="complaints">
+ <div class="stats" id="stats"></div>
+ <div class="card"><h2>Search &amp; Filter</h2><div class="filters">
+  <div><label>Search (number, title, user)</label><input id="q" placeholder="Search..."></div>
+  <div><label>Status</label><select id="fStatus"></select></div>
+  <div><label>Category</label><select id="fCategory"></select></div>
+  <div><label>Department</label><select id="fDepartment"></select></div>
+  <div><label>Priority</label><select id="fPriority"></select></div></div>
+  <div class="row-btns"><button class="btn" onclick="loadComplaints()">Search</button><button class="btn light" onclick="resetFilters()">Reset</button></div></div>
+ <div class="card"><h2>All Complaints</h2><div id="list"></div></div>
+</div>
+<div id="users" class="card"><h2>Registered Users</h2><div id="userlist"></div></div>
+<div id="reports"><h2>Reports</h2><div class="stats" id="rstats"></div>
+ <div class="grid2"><div class="card"><h3>Complaints by Category</h3><div id="byCat"></div></div>
+ <div class="card"><h3>Complaints by Department</h3><div id="byDep"></div></div></div></div>
+<div class="overlay" id="overlay"><div class="modal"><button class="close" onclick="closeModal()">&times;</button><div id="modalBody"></div></div></div>
+</div>
+<script src="/static/js/app.js"></script>
+<script>
+let current=null;
+function show(){
+  const h=location.hash.replace("#","")||"complaints";
+  ["complaints","users","reports"].forEach(id=>document.getElementById(id).style.display=id===h?"block":"none");
+  document.querySelectorAll(".sidebar a").forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="/admin#"+h));
+  if(h==="users") loadUsers(); if(h==="reports") loadReports(); if(h==="complaints") loadStats();
+}
+const statCards=s=>`<div class="stat"><b>${s.total}</b><span>Total Complaints</span></div>
+ <div class="stat c2"><b>${s.pending}</b><span>Pending</span></div><div class="stat c3"><b>${s.in_progress}</b><span>In Progress</span></div>
+ <div class="stat c4"><b>${s.resolved}</b><span>Resolved</span></div><div class="stat c5"><b>${s.rejected}</b><span>Rejected</span></div>
+ <div class="stat"><b>${s.users}</b><span>Total Users</span></div>`;
+async function loadStats(){ stats.innerHTML=statCards(await api("/api/admin/stats")); }
+async function loadComplaints(){
+  const p=new URLSearchParams({q:q.value,status:fStatus.value,category:fCategory.value,department:fDepartment.value,priority:fPriority.value});
+  list.innerHTML=complaintRows(await api("/api/admin/complaints?"+p),true);
+}
+function resetFilters(){ q.value=fStatus.value=fCategory.value=fDepartment.value=fPriority.value=""; loadComplaints(); }
+async function loadUsers(){
+  const u=await api("/api/admin/users");
+  userlist.innerHTML=u.length?`<div class="tablewrap"><table><tr><th>Name</th><th>Username</th><th>Email</th><th>Mobile</th><th>Complaints</th><th>Joined</th></tr>`+
+   u.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.username)}</td><td>${esc(x.email)}</td><td>${esc(x.mobile)}</td><td>${x.complaints}</td><td>${esc(x.joined)}</td></tr>`).join("")+`</table></div>`:'<div class="empty">No users yet.</div>';
+}
+function bars(obj){
+  const e=Object.entries(obj); if(!e.length) return '<div class="empty">No data yet.</div>';
+  const max=Math.max(...e.map(x=>x[1]));
+  return e.map(([k,v])=>`<div class="bar"><span class="name">${esc(k)}</span><div class="track"><div class="fill" style="width:${v/max*100}%"></div></div><span class="num">${v}</span></div>`).join("");
+}
+async function loadReports(){
+  const r=await api("/api/admin/reports");
+  rstats.innerHTML=statCards(r.stats); byCat.innerHTML=bars(r.by_category); byDep.innerHTML=bars(r.by_department);
+}
+async function openComplaint(no){
+  const c=await api("/api/track/"+encodeURIComponent(no)); current=c;
+  modalBody.innerHTML=`<h2>${esc(c.complaint_number)} ${badge(c.status)}</h2>
+   <dl class="detail"><dt>Title</dt><dd>${esc(c.title)}</dd><dt>Description</dt><dd>${esc(c.description)}</dd>
+   <dt>Submitted by</dt><dd>${esc(c.user)} (${esc(c.mobile)})</dd><dt>Category / Location / Priority</dt><dd>${esc(c.category)} / ${esc(c.location)} / ${esc(c.priority)}</dd>
+   ${c.file_url?`<dt>Attachment</dt><dd><a href="${c.file_url}" target="_blank">View uploaded file</a></dd>`:""}</dl>
+   <h3 style="margin-top:1rem">Update Complaint</h3><div id="mmsg" class="msg"></div>
+   <div class="grid2"><div><label>Assign Department</label><select id="mDept">${options(DEPARTMENTS,"- Not assigned -")}</select></div>
+   <div><label>Status</label><select id="mStatus">${options(STATUSES)}</select></div></div>
+   <label>Remark</label><textarea id="mRemark" style="min-height:60px"></textarea>
+   <div class="row-btns"><button class="btn" onclick="saveUpdate()">Save</button>
+   <button class="btn green" onclick="quick('Resolved')">Resolve</button><button class="btn red" onclick="quick('Rejected')">Reject</button>
+   <button class="btn light" onclick="quick('Closed')">Close</button></div>
+   <h3 style="margin-top:1rem">History</h3>${historyHTML(c.history)}`;
+  mDept.value=c.current_department||""; mStatus.value=c.status; overlay.classList.add("show");
+}
+function quick(s){ mStatus.value=s; saveUpdate(); }
+function closeModal(){ overlay.classList.remove("show"); }
+async function saveUpdate(){
+  try{
+    await api("/api/admin/complaints/"+current.id,{method:"PUT",body:{status:mStatus.value,department:mDept.value,remark:mRemark.value}});
+    await loadComplaints(); loadStats(); await openComplaint(current.complaint_number); showMsg("mmsg","Complaint updated successfully",true);
+  }catch(e){ showMsg("mmsg",e.message,false); }
+}
+function pageReady(){
+  fStatus.innerHTML=options(STATUSES,"All"); fCategory.innerHTML=options(CATEGORIES,"All");
+  fDepartment.innerHTML=options(DEPARTMENTS,"All"); fPriority.innerHTML=options(PRIORITIES,"All");
+  q.addEventListener("keydown",e=>{ if(e.key==="Enter") loadComplaints(); });
+  addEventListener("hashchange",show); show(); loadComplaints();
+}
+</script></body></html>

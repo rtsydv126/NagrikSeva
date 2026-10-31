@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Register</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body data-mode="public"><div id="page"><div class="container"><div class="card authbox">
+<h2>Citizen Registration</h2><div id="msg" class="msg"></div>
+<label>Full Name</label><input id="name">
+<label>Email</label><input id="email" type="email">
+<label>Mobile Number</label><input id="mobile" maxlength="10" placeholder="10 digits">
+<label>Username</label><input id="username">
+<label>Password</label><input id="password" type="password">
+<label>Confirm Password</label><input id="confirm" type="password">
+<p><button class="btn" onclick="doRegister()">Register</button></p>
+<p>Already registered? <a href="/login">Login</a></p></div></div></div>
+<script src="/static/js/app.js"></script>
+<script>
+const v=id=>document.getElementById(id).value;
+async function doRegister(){
+  try{
+    const r=await api("/api/register",{method:"POST",body:{name:v("name"),email:v("email"),mobile:v("mobile"),
+      username:v("username"),password:v("password"),confirm_password:v("confirm")}});
+    showMsg("msg",r.message,true); setTimeout(()=>location="/login",1500);
+  }catch(e){ showMsg("msg",e.message,false); }
+}
+</script></body></html>

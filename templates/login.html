@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Login</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body data-mode="public"><div id="page"><div class="container"><div class="card authbox">
+<h2>Login</h2><div id="msg" class="msg"></div>
+<label>Username</label><input id="username" autofocus>
+<label>Password</label><input id="password" type="password">
+<p><button class="btn" onclick="doLogin()">Login</button></p>
+<p>New user? <a href="/register">Register here</a></p></div></div></div>
+<script src="/static/js/app.js"></script>
+<script>
+async function doLogin(){
+  try{ const r=await api("/api/login",{method:"POST",body:{username:username.value,password:password.value}}); location=r.redirect; }
+  catch(e){ showMsg("msg",e.message,false); }
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+</script></body></html>

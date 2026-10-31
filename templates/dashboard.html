@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Citizen Dashboard</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body data-mode="user" data-title="Citizen Dashboard"><div id="page">
+<div id="home">
+ <div class="stats" id="stats"></div>
+ <p><a class="btn accent" href="/complaint">Submit Complaint</a> <a class="btn light" href="#mine">My Complaints</a>
+ <a class="btn light" href="/track">Track Complaint</a> <a class="btn light" href="#notifications">Notifications</a>
+ <button class="btn light" onclick="logout()">Logout</button></p>
+ <div class="card"><h2>Recent Complaints</h2><div id="recent"></div></div>
+</div>
+<div id="mine" class="card"><h2>My Complaints</h2><div id="all"></div></div>
+<div id="notifications" class="card"><h2>Notifications</h2><div id="notes"></div></div>
+</div>
+<script src="/static/js/app.js"></script>
+<script>
+function show(){
+  const h=location.hash.replace("#","")||"home";
+  ["home","mine","notifications"].forEach(id=>document.getElementById(id).style.display=id===h?"block":"none");
+  document.querySelectorAll(".sidebar a").forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="/dashboard#"+h));
+  if(h==="notifications") loadNotes();
+}
+async function loadNotes(){
+  const n=await api("/api/notifications");
+  notes.innerHTML=n.length?n.map(x=>`<div class="note ${x.is_read?"":"unread"}">${esc(x.message)}<small>${esc(x.date)}</small></div>`).join(""):'<div class="empty">No notifications yet.</div>';
+  await api("/api/notifications/read",{method:"POST"});
+}
+async function pageReady(){
+  const s=await api("/api/stats");
+  stats.innerHTML=`<div class="stat"><b>${s.total}</b><span>Total Complaints</span></div>
+   <div class="stat c2"><b>${s.pending}</b><span>Pending</span></div>
+   <div class="stat c3"><b>${s.in_progress}</b><span>In Progress</span></div>
+   <div class="stat c4"><b>${s.resolved}</b><span>Resolved</span></div>`;
+  const rows=await api("/api/complaints");
+  recent.innerHTML=complaintRows(rows.slice(0,5)); all.innerHTML=complaintRows(rows);
+  addEventListener("hashchange",show); show();
+}
+</script></body></html>

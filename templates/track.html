@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Track Complaint</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body data-mode="any" data-title="Track Complaint"><div id="page"><div class="container" style="padding:1rem 0">
+<div class="card"><h2>Track Your Complaint</h2>
+<label>Complaint Number</label>
+<div style="display:flex;gap:.5rem"><input id="no" placeholder="e.g. CMP-2026-00001"><button class="btn" onclick="search()" style="white-space:nowrap">Track</button></div>
+<div id="msg" class="msg"></div></div>
+<div id="result"></div></div></div>
+<script src="/static/js/app.js"></script>
+<script>
+async function search(){
+  result.innerHTML=""; msg.className="msg";
+  try{
+    const c=await api("/api/track/"+encodeURIComponent(no.value.trim()));
+    const dt=(k,v)=>`<dt>${k}</dt><dd>${v}</dd>`;
+    result.innerHTML=`<div class="grid2"><div class="card"><h2>${esc(c.complaint_number)}</h2><dl class="detail">
+      ${dt("Title",esc(c.title))}${c.description?dt("Description",esc(c.description)):""}${dt("Category",esc(c.category))}
+      ${dt("Department",esc(c.department))}${dt("Location",esc(c.location))}${dt("Priority",`<span class="pri-${c.priority}">${esc(c.priority)}</span>`)}
+      ${dt("Current Status",badge(c.status))}${dt("Submitted Date",esc(c.submitted))}${dt("Last Updated",esc(c.updated))}
+      ${dt("Admin Remark",esc(c.admin_remark))}
+      ${c.file_url?dt("Attachment",`<a href="${c.file_url}" target="_blank">View uploaded file</a>`):""}</dl></div>
+      <div class="card"><h2>Status Timeline</h2>${timelineHTML(c.status)}</div></div>
+      <div class="card"><h2>Complaint History</h2>${historyHTML(c.history)}</div>`;
+  }catch(e){ showMsg("msg",e.message,false); }
+}
+no.addEventListener("keydown",e=>{ if(e.key==="Enter") search(); });
+const q=new URLSearchParams(location.search).get("no");
+if(q){ no.value=q; search(); }
+</script></body></html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Submit Complaint</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body data-mode="user" data-title="Submit Complaint"><div id="page"><div class="card" style="max-width:720px">
+<h2>Submit a New Complaint</h2><div id="msg" class="msg"></div>
+<form id="f">
+<label>Complaint Title</label><input name="title" required>
+<label>Description</label><textarea name="description" required></textarea>
+<div class="grid2"><div><label>Category</label><select name="category" id="category"></select></div>
+<div><label>Department</label><select name="department" id="department"></select></div></div>
+<label>Location</label><input name="location" placeholder="Area / street / landmark" required>
+<div class="grid2"><div><label>Priority</label><select name="priority" id="priority"></select></div>
+<div><label>Supporting Image/PDF (JPG, PNG, PDF - max 5 MB)</label><input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf"></div></div>
+<p><button class="btn accent" type="submit">Submit Complaint</button></p></form></div></div>
+<script src="/static/js/app.js"></script>
+<script>
+function pageReady(){
+  category.innerHTML=options(CATEGORIES);
+  department.innerHTML=options(DEPARTMENTS,"Not sure (admin will assign)");
+  priority.innerHTML=options(PRIORITIES); priority.value="Medium";
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    try{
+      const r=await api("/api/complaints",{method:"POST",body:new FormData(f)});
+      showMsg("msg",r.message+" Your complaint number is "+r.complaint_number,true);
+      f.reset(); priority.value="Medium"; scrollTo(0,0);
+    }catch(err){ showMsg("msg",err.message,false); }
+  };
+}
+</script></body></html>
